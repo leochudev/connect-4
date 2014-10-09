@@ -1,0 +1,4 @@
+# ignore all file in directory doc
+doc/
+# ignore all file in directory test
+#test/
