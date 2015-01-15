@@ -3,6 +3,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <vector>
+#include <limits>
 
 Player::Player(){
 	playerType=GameBoard::playerO;
@@ -25,7 +26,7 @@ GameBoard::TYPE Player::getEnemyType(){
 Human::Human():Player(){}
 Human::Human(GameBoard::TYPE t):Player(t){}
 Human::~Human(){}
-int Human::nextStep(const GameBoard &obj){
+int Human::nextStep(GameBoard *obj){
 	int i;
 	printf("Input your next step :");
 	std::cin >> i;
@@ -41,29 +42,46 @@ Computer::Computer(GameBoard::TYPE t):Player(t){
 }
 Computer::~Computer(){}
 
-int Computer::nextStep(const GameBoard &obj){
-	GameBoard* tmp = new GameBoard(obj);
-	int step = evaluateMove(tmp);
-	free(tmp);
+int Computer::nextStep(GameBoard *obj){
+	int step = evaluateMove(obj);
 	printf("Computer input next step: %d\n", step+1);
 	return step+1;
 }
 
-int Computer::evaluateMove(GameBoard* board){ // TODO AI bugs
-	int depth=0, alpha =100, beta=-100, player=1;
-	int bestMove=0, bestScore=100;
+// player 1 for x, -1 for o
+int Computer::evaluateMove(GameBoard* board){
+	int depth=0, player=1;
+	int alpha =std::numeric_limits<int>::min(); // maximum lower bound
+	int beta=std::numeric_limits<int>::max(); // minumum upper bound
 	
 	std::vector<int> possibleSteps = board->getAllPossibleSteps();
-	for(int step:possibleSteps){
-		GameBoard* tmpboard = getNewState(board, player, step);
-		int score = alphabeta(tmpboard, alpha, beta, depth+1,-player);
-		free(tmpboard);
+	for(int step:possibleSteps){ // check for win (win purpose)
+		bool win = false;
+		getNewState(board,player,step);
+		if(board->isGameOver()==getPlayerType())win=true;
+		board->undoStep();
+		if (win) return step;
+	}
+	for(int step:possibleSteps){ // check for lose (block purpose)
+		bool win = false;
+		getNewState(board,-player,step);
+		if(board->isGameOver()==getEnemyType())win=true;
+		board->undoStep();
+		if (win) return step;
+	}
 
-
-		printf("%d\n", score);
-		if(score<bestScore){
-			bestScore = score;
+	
+	int bestMove = possibleSteps[0];
+	for(int step:possibleSteps){//maximizer
+		if(alpha>=beta){
+			return bestMove;
+		}
+		getNewState(board, player, step);
+		int score = alphabeta(board, alpha, beta, depth+1,player);
+		board->undoStep();
+		if(score>alpha){
 			bestMove = step;
+			alpha=score;
 		}
 	}
 
@@ -73,37 +91,32 @@ int Computer::evaluateMove(GameBoard* board){ // TODO AI bugs
 int Computer::alphabeta(GameBoard* board, int alpha, int beta, int depth, int player){
 	GameBoard::TYPE result = board->isGameOver();
 	if (result != GameBoard::blank || depth==Computer::MAX_DEPTH){
-		return unitScore(result, depth);
+		int score = board->getHeuristicScore(getPlayerType(), depth);
+		return score;
 	}
 
-	int v = player>0?alpha:beta;
 	std::vector<int> possibleSteps = board->getAllPossibleSteps();
 	for(int step:possibleSteps){
-		GameBoard* tmpboard = getNewState(board, player, step);
+		if(alpha>=beta)
+			return player>0? alpha:beta; // true : maximizer, false minimizer
+
 		if (player>0){ // maximizer
-			int score = alphabeta(tmpboard, v, beta, depth+1, -player);
-			if (score>v) v=score;
-			if (v>beta) return beta;
+			getNewState(board, player, step);
+			int score = alphabeta(board, alpha, beta, depth+1, -player);
+			board->undoStep();
+			if (score>alpha) alpha=score;
 		} else{ // minimizer
-			int score = alphabeta(tmpboard, alpha, v, depth+1, -player);
-			if (score<v) v=score;
-			if (v<alpha) return alpha;
+			getNewState(board, player, step);
+			int score = alphabeta(board, alpha, beta, depth+1, -player);
+			board->undoStep();
+			if (score<beta) beta=score;
 		}
-		free(tmpboard);
 	}
-	return v;
+	return player>0? alpha:beta;
 }
 
-GameBoard* Computer::getNewState(GameBoard* obj, int player, int step){
-	GameBoard* tmp = new GameBoard(*obj);
+void Computer::getNewState(GameBoard* obj, int player, int step){
 	GameBoard::TYPE type = player>0? getPlayerType():getEnemyType();
-	tmp->inputStep(step+1, type);
-	return tmp;
-}
-
-int Computer::unitScore(GameBoard::TYPE winner, int depth){
-	if (winner == GameBoard::blank) return 0;
-	if (winner == GameBoard::draw) return 0;
-	return winner == getPlayerType()?50-depth:depth-50;
+	obj->inputStep(step+1, type);
 }
 

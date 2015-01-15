@@ -1,3 +1,5 @@
+
+
 #include "game.h"
 
 Connect4::Connect4(){
@@ -18,11 +20,13 @@ void Connect4::gameStart(){
 	printMenu();
 	gameBoard->printGameBoard();
 	while(state==GameBoard::blank){
-		Player* ptr = (round++) % 2 == 0 ? playerA : playerB;
-		gameBoard->inputStep(ptr->nextStep(*gameBoard), ptr->getPlayerType());
+		Player* ptr = (round) % 2 == 0 ? playerA : playerB;
+		if(!gameBoard->inputStep(ptr->nextStep(gameBoard), ptr->getPlayerType()))
+			printf("%s\n", "input error!!");
+		else
+			round++;
 		gameBoard->printGameBoard();
 		state=gameBoard->isGameOver();
-
 		ptr=NULL;// release pointer
 	}
 }

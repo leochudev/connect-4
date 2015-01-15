@@ -24,6 +24,9 @@ public:
 	
 	void printGameBoard();
 	bool inputStep(int i, TYPE t);
+	int undoStep();
+	int getHeuristicScore(TYPE currentPlayer, int depth);
+	int getUnitScore(bool isPlayer, int playerCount, int enemyCount);
 	TYPE isGameOver();
 	char getTypeChar(TYPE t);
 	std::vector<int> getAllPossibleSteps();
@@ -31,6 +34,7 @@ public:
 private:
 	int lastMove;
 	int gameBoardNum[ROW];
+	int moves[128];
 	board gameBoard;
 
 	bool isDrawGame();
